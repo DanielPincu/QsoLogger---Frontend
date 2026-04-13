@@ -28,6 +28,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Create env file
+        run: |
+          echo "VITE_API_URL=https://qsologger-backend.onrender.com" >> .env
+
       - name: Build app
         run: npm run build
 
