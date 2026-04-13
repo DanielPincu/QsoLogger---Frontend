@@ -65,7 +65,9 @@ test('2 users create QSO and it becomes confirmed', async ({ browser }) => {
   await pageA.click('button[type="submit"]')
 
   // should appear as NOT confirmed initially
-  await expect(pageA.locator('text=Not confirmed')).toBeVisible()
+  await expect(
+    pageA.getByTestId('qso-status').filter({ hasText: 'Not confirmed' })
+  ).toBeVisible()
 
   
   // USER B CREATES MATCHING QSO
@@ -85,5 +87,7 @@ test('2 users create QSO and it becomes confirmed', async ({ browser }) => {
   // reload user A page to get updated data
   await pageA.reload()
 
-  await expect(pageA.getByText('Confirmed', { exact: true }).first()).toBeVisible()
+  await expect(
+    pageA.getByTestId('qso-status').filter({ hasText: 'Confirmed' })
+  ).toBeVisible()
 })

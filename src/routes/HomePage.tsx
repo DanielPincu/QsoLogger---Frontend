@@ -266,6 +266,7 @@ export default function HomePage() {
                 <strong>{qso.remoteCallsign}</strong> - {qso.band} - {qso.mode}
               </div>
               <div
+                data-testid="qso-status"
                 className={`px-3 py-1 rounded-full text-sm font-semibold
                   ${qso.confirmed
                     ? 'bg-green-100 text-green-700 border border-green-300'
