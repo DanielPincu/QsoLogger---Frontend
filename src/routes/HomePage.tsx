@@ -25,8 +25,28 @@ function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { la
     (from.lon + to.lon) / 2
   ]
 
+  // Rough distance calculation (Haversine)
+  const toRad = (v: number) => (v * Math.PI) / 180
+  const R = 6371
+  const dLat = toRad(to.lat - from.lat)
+  const dLon = toRad(to.lon - from.lon)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const distance = R * c
+
+  // Dynamic zoom based on distance
+  let zoom = 2
+  if (distance < 200) zoom = 7
+  else if (distance < 500) zoom = 6
+  else if (distance < 1000) zoom = 5
+  else if (distance < 3000) zoom = 4
+  else zoom = 2
+
   return (
-    <Map center={center} zoom={2} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+    <Map center={center} zoom={zoom} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
