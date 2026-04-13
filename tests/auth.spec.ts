@@ -41,4 +41,41 @@ test.describe('Auth flow', () => {
     await page.goto(`${BASE_URL}/`)
     await expect(page).toHaveURL(/login/)
   })
+  test('register + login works (UI)', async ({ page }) => {
+    const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`
+
+    const email = `dl1test+${unique}@mail.com`
+    const callsign = `DL1${unique}`.slice(0, 20)
+    const password = 'password123'
+
+    // REGISTER
+    await page.goto(`${BASE_URL}/register`)
+
+    await page.fill('input[name="callsign"]', callsign)
+    await page.fill('input[name="locator"]', 'JO45')
+    await page.fill('input[name="email"]', email)
+    await page.fill('input[name="password"]', password)
+    await page.fill('input[placeholder="Confirm Password"]', password)
+
+    await page.click('button[type="submit"]')
+
+    await page.waitForURL(`${BASE_URL}/`, { timeout: 15000 })
+
+    await expect(page.locator(`text=${callsign}`)).toBeVisible()
+
+    // LOGOUT
+    await page.click('text=Logout')
+    await expect(page).toHaveURL(/login/)
+
+    // LOGIN
+    await page.fill('input[name="email"]', email)
+    await page.fill('input[name="password"]', password)
+
+    await page.click('button[type="submit"]')
+
+    await page.waitForURL(`${BASE_URL}/`, { timeout: 15000 })
+
+    await expect(page.locator(`text=${callsign}`)).toBeVisible()
+  })
+
 })
