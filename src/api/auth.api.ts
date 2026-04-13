@@ -1,18 +1,12 @@
 import http from './http.api'
+import type { LoginPayload, RegisterPayload } from '../interfaces/auth.interface'
 
-export const login = async (payload: {
-  email: string
-  password: string
-}) => {
+export const login = async (payload: LoginPayload) => {
   const { data } = await http.post('/auth/login', payload)
   return data
 }
 
-export const register = async (payload: {
-  email: string
-  password: string
-  callsign: string
-}) => {
+export const register = async (payload: RegisterPayload) => {
   const { data } = await http.post('/auth/register', payload)
   return data
 }
