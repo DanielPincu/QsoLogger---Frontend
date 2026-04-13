@@ -1,26 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import HomePage from './routes/HomePage'
-import About from './routes/About'
-import Contact from './routes/Contact'
+import App from './App'
 import './index.css'
-
-
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <HomePage />,
-  },
-  {
-    path: '/about',
-    element: <About />,
-  },
-  {
-    path: '/contact',
-    element: <Contact />,
-  },
-])
+import { SessionProvider } from './auth/Session'
 
 const root = document.getElementById('root')
 
@@ -30,6 +12,8 @@ if (!root) {
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <SessionProvider>
+      <App />
+    </SessionProvider>
   </React.StrictMode>
 )
