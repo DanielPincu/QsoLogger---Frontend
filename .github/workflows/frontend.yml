@@ -1,0 +1,43 @@
+name: Frontend CI/CD
+
+on:
+  pull_request:
+    branches:
+      - production
+  push:
+    branches:
+      - production
+
+jobs:
+  build-test-deploy:
+    name: Build, Test & Deploy Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      # Later when ready
+      # - name: Run tests
+      #   run: npm run test
+
+      # DEPLOY TO FTP
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: dist/
+          server-dir: qso/
