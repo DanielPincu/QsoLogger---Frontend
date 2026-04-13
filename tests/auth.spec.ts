@@ -5,7 +5,7 @@ const BASE_URL = 'http://localhost:5173'
 function randomUser() {
   const id = `${Date.now()}-${Math.floor(Math.random() * 100000)}`
   return {
-    callsign: `TEST${id}`,
+    callsign: `T${id}`.slice(0, 20),
     email: `test${id}@mail.com`,
     password: 'RunTimeError123!',
     locator: 'JO42',
