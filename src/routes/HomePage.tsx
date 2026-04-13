@@ -26,7 +26,7 @@ function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { la
   ]
 
   return (
-    <Map center={center} zoom={2} style={{ height: '100%', width: '100%' }}>
+    <Map center={center} zoom={2} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
@@ -41,6 +41,9 @@ function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { la
 }
 
 export default function HomePage() {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [highlightForm, setHighlightForm] = useState(false)
+
   const [qsos, setQsos] = useState<Qso[]>([])
   const [form, setForm] = useState({
     remoteCallsign: '',
@@ -82,12 +85,18 @@ export default function HomePage() {
     }
 
     try {
+      if (editingId) {
+        // simple update via delete + create (since no update endpoint yet)
+        await deleteQso(editingId)
+      }
+
       await createQso(form)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
-      alert('Failed to create QSO')
+    } catch {
+      alert('Failed to save QSO')
       return
     }
+
+    setEditingId(null)
 
     setForm({
       remoteCallsign: '',
@@ -103,6 +112,9 @@ export default function HomePage() {
   }
 
   const handleDelete = async (id: string) => {
+    const ok = confirm('Are you sure you want to delete this QSO?')
+    if (!ok) return
+
     await deleteQso(id)
     // Refetch after delete
     const data = await getQsos()
@@ -115,7 +127,11 @@ export default function HomePage() {
 
       <h1 className="text-xl mb-4">Log QSO</h1>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-4 gap-2 w-full">
+      <form
+        onSubmit={handleSubmit}
+        className={`grid grid-cols-4 gap-2 w-full transition-all duration-300
+          ${highlightForm ? 'ring-4 ring-red-300 bg-red-50 animate-pulse' : ''}`}
+      >
         <div className="flex flex-col col-span-4">
           <label className="text-sm font-semibold mb-1">Operator Callsign</label>
           <input
@@ -156,22 +172,37 @@ export default function HomePage() {
           value={form.qsoDate}
           onChange={handleChange}
           onFocus={(e) => e.currentTarget.showPicker && e.currentTarget.showPicker()}
-          max={new Date().toISOString().slice(0,16)}
+          // eslint-disable-next-line react-hooks/purity
+          max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16)}
           className="border p-2 col-span-2 cursor-pointer"
         />
-        <button type="submit" className="bg-green-600 text-white px-4 py-2 col-span-2">Save</button>
+        <button
+          type="submit"
+          className="bg-green-600 text-white px-4 py-2 col-span-2 rounded font-semibold
+                     transition-all duration-200 ease-in-out
+                     hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+        >
+          Save
+        </button>
       </form>
 
       <h2 className="text-lg mt-6 mb-2">Your QSOs</h2>
 
       <ul className="space-y-2">
-        {qsos.map((qso) => (
-          <li key={qso._id} className="border p-3 flex flex-col gap-1">
-            <div className="flex justify-between">
+        {[...qsos]
+          .sort((a, b) => Number(a.confirmed) - Number(b.confirmed))
+          .map((qso) => (
+          <li key={qso._id} className="border-4 p-3 flex flex-col gap-1">
+            <div className="flex justify-between items-center">
               <div>
                 <strong>{qso.remoteCallsign}</strong> - {qso.band} - {qso.mode}
               </div>
-              <div className={qso.confirmed ? 'text-green-500' : 'text-yellow-500'}>
+              <div
+                className={`px-3 py-1 rounded-full text-sm font-semibold
+                  ${qso.confirmed
+                    ? 'bg-green-100 text-green-700 border border-green-300'
+                    : 'bg-yellow-100 text-yellow-700 border border-yellow-300'}`}
+              >
                 {qso.confirmed ? 'Confirmed' : 'Not confirmed'}
               </div>
             </div>
@@ -187,7 +218,7 @@ export default function HomePage() {
 
                 {/* Leaflet Map */}
                 {qso.from && qso.to && (
-                  <div className="h-48 w-full rounded border overflow-hidden">
+                  <div className="h-96 w-full rounded border overflow-hidden">
                     {/* Leaflet Map */}
                     <LeafletMap from={qso.from} to={qso.to} />
                   </div>
@@ -196,12 +227,40 @@ export default function HomePage() {
             )}
 
             {!qso.confirmed && (
+            <div className="flex gap-2 self-end">
+              <button
+                onClick={() => {
+                    if (editingId === qso._id) {
+                      setHighlightForm(true)
+                      setTimeout(() => setHighlightForm(false), 600)
+                      return
+                    }
+
+                    setEditingId(qso._id)
+                    setHighlightForm(true)
+                    setTimeout(() => setHighlightForm(false), 1500)
+                    setForm({
+                      remoteCallsign: qso.remoteCallsign,
+                      band: qso.band,
+                      mode: qso.mode,
+                      rstSent: qso.rstSent || '',
+                      rstReceived: qso.rstReceived || '',
+                      qsoDate: qso.qsoDate.slice(0,16)
+                    })
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                className="text-blue-500"
+              >
+                Edit
+              </button>
+
               <button
                 onClick={() => handleDelete(qso._id)}
-                className="text-red-500 self-end"
+                className="text-red-500"
               >
                 Delete
               </button>
+            </div>
             )}
           </li>
         ))}
