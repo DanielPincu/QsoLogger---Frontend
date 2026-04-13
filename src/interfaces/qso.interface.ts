@@ -1,10 +1,13 @@
+import type { Band } from '../types/qsoBand'
+import type { Mode } from '../types/qsoMode'
+
 export interface Qso {
   _id: string
 
   remoteCallsign: string
 
-  band: string
-  mode: string
+  band: Band
+  mode: Mode
 
   rstSent?: string
   rstReceived?: string
