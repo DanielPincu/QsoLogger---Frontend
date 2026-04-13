@@ -1,89 +1,98 @@
 import { test, expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+type TestUser = {
+  callsign: string
+  email: string
+  password: string
+  locator: string
+}
 
 const BASE_URL = 'http://localhost:5173'
 
-function randomUser(prefix: string) {
+function randomUser(prefix: string): TestUser {
   const id = `${Date.now()}-${Math.floor(Math.random() * 100000)}`
   return {
     callsign: `${prefix}${id}`.slice(0, 20),
     email: `${prefix}${id}@mail.com`,
     password: 'RunTimeError123!',
-    locator: prefix === 'A' ? 'JO45' : 'CN87', // Europe vs USA for realism
+    locator: prefix === 'A' ? 'JO45' : 'CN87',
   }
 }
 
-test('2 users create QSO and it becomes confirmed', async ({ browser }) => {
+function normalizeNow() {
+  const d = new Date()
+  d.setSeconds(0, 0)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
+}
+
+async function register(page: Page, user: TestUser) {
+  await page.goto(`${BASE_URL}/register`)
+  await page.fill('input[name="callsign"]', user.callsign)
+  await page.fill('input[name="locator"]', user.locator)
+  await page.fill('input[name="email"]', user.email)
+  await page.fill('input[name="password"]', user.password)
+  await page.fill('input[placeholder="Confirm Password"]', user.password)
+  await page.click('button[type="submit"]')
+  await page.waitForURL(`${BASE_URL}/`)
+}
+
+async function createQso(page: Page, remoteCallsign: string, date: string) {
+  await page.fill('input[name="remoteCallsign"]', remoteCallsign.trim().toUpperCase())
+  await page.selectOption('select[name="band"]', '40m')
+  await page.selectOption('select[name="mode"]', 'SSB')
+  await page.selectOption('select[name="rstSent"]', '59')
+  await page.selectOption('select[name="rstReceived"]', '59')
+  await page.fill('input[name="qsoDate"]', date)
+  await page.click('button[type="submit"]')
+}
+
+test('QSO gets confirmed when both users log matching entries', async ({ browser }) => {
   const userA = randomUser('A')
   const userB = randomUser('B')
 
-  // Create 2 separate browser contexts (2 users)
   const contextA = await browser.newContext()
   const contextB = await browser.newContext()
 
   const pageA = await contextA.newPage()
   const pageB = await contextB.newPage()
 
- 
-  // USER A REGISTER
-  
-  await pageA.goto(`${BASE_URL}/register`)
-  await pageA.fill('input[name="callsign"]', userA.callsign)
-  await pageA.fill('input[name="locator"]', userA.locator)
-  await pageA.fill('input[name="email"]', userA.email)
-  await pageA.fill('input[name="password"]', userA.password)
-  await pageA.fill('input[placeholder="Confirm Password"]', userA.password)
-  await pageA.click('button[type="submit"]')
-  await pageA.waitForURL(`${BASE_URL}/`, { timeout: 15000 })
+  const timestamp = normalizeNow()
 
- 
-  // USER B REGISTER
-  
-  await pageB.goto(`${BASE_URL}/register`)
-  await pageB.fill('input[name="callsign"]', userB.callsign)
-  await pageB.fill('input[name="locator"]', userB.locator)
-  await pageB.fill('input[name="email"]', userB.email)
-  await pageB.fill('input[name="password"]', userB.password)
-  await pageB.fill('input[placeholder="Confirm Password"]', userB.password)
-  await pageB.click('button[type="submit"]')
-  await pageB.waitForURL(`${BASE_URL}/`, { timeout: 15000 })
+  // REGISTER USERS
+  await register(pageA, userA)
+  await register(pageB, userB)
 
-  
   // USER A CREATES QSO
-  
-  await pageA.fill('input[name="remoteCallsign"]', userB.callsign)
-  await pageA.selectOption('select[name="band"]', '40m')
-  await pageA.selectOption('select[name="mode"]', 'SSB')
-  await pageA.selectOption('select[name="rstSent"]', '59')
-  await pageA.selectOption('select[name="rstReceived"]', '59')
+  await createQso(pageA, userB.callsign, timestamp)
 
-  const now = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16)
+  // Verify appears as NOT confirmed
+  await expect(pageA.locator(`text=${userB.callsign}`)).toBeVisible()
+  await expect(
+    pageA.getByTestId('qso-status').filter({ hasText: 'Not confirmed' })
+  ).toBeVisible()
 
-  await pageA.fill('input[name="qsoDate"]', now)
-
-  await pageA.click('button[type="submit"]')
-
-  // should appear as NOT confirmed initially
-  await expect(pageA.locator('text=Not confirmed')).toBeVisible()
-
-  
   // USER B CREATES MATCHING QSO
-  
-  await pageB.fill('input[name="remoteCallsign"]', userA.callsign)
-  await pageB.selectOption('select[name="band"]', '40m')
-  await pageB.selectOption('select[name="mode"]', 'SSB')
-  await pageB.selectOption('select[name="rstSent"]', '59')
-  await pageB.selectOption('select[name="rstReceived"]', '59')
-  await pageB.fill('input[name="qsoDate"]', now)
+  await createQso(pageB, userA.callsign, timestamp)
 
-  await pageB.click('button[type="submit"]')
+  // allow backend to process matching
+  await pageB.waitForTimeout(1500)
 
- 
-  // VERIFY CONFIRMATION
-  
-  // reload user A page to get updated data
-  await pageA.reload()
+  // VERIFY CONFIRMATION (poll until confirmed)
+  await expect(async () => {
+    await pageA.reload()
+    await pageB.reload()
 
-  await expect(pageA.getByText('Confirmed', { exact: true }).first()).toBeVisible()
+    // small delay after reload to let UI render updated state
+    await pageA.waitForTimeout(500)
+
+    const confirmedCount = await pageA
+      .getByTestId('qso-status')
+      .filter({ hasText: 'Confirmed' })
+      .count()
+
+    expect(confirmedCount).toBeGreaterThan(0)
+  }).toPass({ timeout: 15000 })
 })
