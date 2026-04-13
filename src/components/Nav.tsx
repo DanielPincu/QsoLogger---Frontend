@@ -1,13 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useAuth } from '../auth/Session'
 
 export default function Nav() {
-  const [isLogged, setIsLogged] = useState(() => !!localStorage.getItem('token'))
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    setIsLogged(false)
+    logout()
     navigate('/login')
   }
 
@@ -26,7 +25,7 @@ export default function Nav() {
       </Link>
 
       <div className="ml-auto">
-        {isLogged ? (
+        {user ? (
           <button
             onClick={handleLogout}
             className="hover:underline"
@@ -34,9 +33,14 @@ export default function Nav() {
             Logout
           </button>
         ) : (
-          <Link to="/login" className="hover:underline">
-            Login
-          </Link>
+          <div className="flex gap-4">
+            <Link to="/login" className="hover:underline">
+              Login
+            </Link>
+            <Link to="/register" className="hover:underline">
+              Register
+            </Link>
+          </div>
         )}
       </div>
     </nav>

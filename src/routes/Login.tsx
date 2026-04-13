@@ -31,6 +31,8 @@ export default function Login() {
     try {
       const data = await loginApi(form)
 
+      localStorage.setItem('token', data.token)
+
       await login(data.token)
 
       navigate('/')
@@ -78,6 +80,15 @@ export default function Login() {
         >
           {loading ? 'Logging in...' : 'Login'}
         </button>
+        <div className="text-sm mt-2">
+          Don't have an account?{' '}
+          <span
+            className="text-blue-600 cursor-pointer underline"
+            onClick={() => navigate('/register')}
+          >
+            Register
+          </span>
+        </div>
       </form>
     </div>
   )
