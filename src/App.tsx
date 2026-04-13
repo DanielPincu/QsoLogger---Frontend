@@ -5,6 +5,7 @@ import HomePage from './routes/HomePage'
 import About from './routes/About'
 import Contact from './routes/Contact'
 import Login from './routes/Login'
+import Register from './routes/Register'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
+  },
+  {
+    path: '/register',
+    element: <Register />,
   },
 ])
 
