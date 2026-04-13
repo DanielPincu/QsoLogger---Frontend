@@ -16,6 +16,10 @@ export interface Qso {
   confirmed: boolean
   confirmedAt?: string
 
+  // derived / backend-enriched fields
+  distanceKm?: number
+  matchedQsoId?: string
+
   // map-related 
   from?: {
     lat: number
