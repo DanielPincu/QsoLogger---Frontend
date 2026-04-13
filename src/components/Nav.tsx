@@ -26,12 +26,17 @@ export default function Nav() {
 
       <div className="ml-auto">
         {user ? (
-          <button
-            onClick={handleLogout}
-            className="hover:underline"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-sm">
+              {user.callsign || user.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="hover:underline"
+            >
+              Logout
+            </button>
+          </div>
         ) : (
           <div className="flex gap-4">
             <Link to="/login" className="hover:underline">

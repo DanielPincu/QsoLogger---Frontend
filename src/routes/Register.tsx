@@ -42,6 +42,7 @@ export default function Register() {
       const data = await registerApi(form)
       await login(data.token)
       navigate('/')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const backend = err?.response?.data
 
@@ -55,6 +56,7 @@ export default function Register() {
         if (typeof backend.errors[0] === 'string') {
           message = backend.errors.join(', ')
         } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           message = backend.errors.map((e: any) => e.message).join(', ')
         }
       } else if (backend?.data?.message) {
