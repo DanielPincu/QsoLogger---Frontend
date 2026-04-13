@@ -65,6 +65,8 @@ export default function HomePage() {
   const [highlightForm, setHighlightForm] = useState(false)
 
   const [qsos, setQsos] = useState<Qso[]>([])
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'unconfirmed'>('all')
+  const [dateFilter, setDateFilter] = useState<'recent' | 'older'>('recent')
   const [form, setForm] = useState({
     remoteCallsign: '',
     band: '' as Qso['band'] | '',
@@ -208,9 +210,55 @@ export default function HomePage() {
 
       <h2 className="text-lg mt-6 mb-2">Your QSOs</h2>
 
+      <div className="flex gap-4 mb-4">
+        <select
+          value={statusFilter}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="border p-2"
+        >
+          <option value="all">All</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="unconfirmed">Unconfirmed</option>
+        </select>
+
+        <select
+          value={dateFilter}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onChange={(e) => setDateFilter(e.target.value as any)}
+          className="border p-2"
+        >
+          <option value="recent">Recent first</option>
+          <option value="older">Older first</option>
+        </select>
+      </div>
+
       <ul className="space-y-2">
         {[...qsos]
-          .sort((a, b) => Number(a.confirmed) - Number(b.confirmed))
+          .filter((qso) => {
+            if (statusFilter === 'confirmed') return qso.confirmed
+            if (statusFilter === 'unconfirmed') return !qso.confirmed
+            return true
+          })
+          .sort((a, b) => {
+            // Explicit: unconfirmed always first
+            if (!a.confirmed && b.confirmed) return -1
+            if (a.confirmed && !b.confirmed) return 1
+
+            // Within same group
+            if (!a.confirmed && !b.confirmed) {
+              // Unconfirmed → sort by qsoDate (newest first)
+              return dateFilter === 'recent'
+                ? new Date(b.qsoDate).getTime() - new Date(a.qsoDate).getTime()
+                : new Date(a.qsoDate).getTime() - new Date(b.qsoDate).getTime()
+            }
+
+            // Confirmed → sort by confirmedAt if exists, else qsoDate
+            const dateA = a.confirmedAt ? new Date(a.confirmedAt).getTime() : new Date(a.qsoDate).getTime()
+            const dateB = b.confirmedAt ? new Date(b.confirmedAt).getTime() : new Date(b.qsoDate).getTime()
+
+            return dateFilter === 'recent' ? dateB - dateA : dateA - dateB
+          })
           .map((qso) => (
           <li key={qso._id} className="border-4 p-3 flex flex-col gap-1">
             <div className="flex justify-between items-center">
