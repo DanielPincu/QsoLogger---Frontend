@@ -212,9 +212,9 @@ export default function HomePage() {
 
       <div className="flex gap-4 mb-4">
         <select
+          name="statusFilter"
           value={statusFilter}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onChange={(e) => setStatusFilter(e.target.value as any)}
+          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'confirmed' | 'unconfirmed')}
           className="border p-2"
         >
           <option value="all">All</option>
@@ -223,9 +223,9 @@ export default function HomePage() {
         </select>
 
         <select
+          name="dateFilter"
           value={dateFilter}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onChange={(e) => setDateFilter(e.target.value as any)}
+          onChange={(e) => setDateFilter(e.target.value as 'recent' | 'older')}
           className="border p-2"
         >
           <option value="recent">Recent first</option>
