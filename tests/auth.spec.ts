@@ -3,11 +3,11 @@ import { test, expect } from '@playwright/test'
 const BASE_URL = 'http://localhost:5173'
 
 function randomUser() {
-  const id = Date.now()
+  const id = `${Date.now()}-${Math.floor(Math.random() * 100000)}`
   return {
     callsign: `TEST${id}`,
     email: `test${id}@mail.com`,
-    password: 'RunTimeError',
+    password: 'RunTimeError123!',
     locator: 'JO42',
   }
 }
@@ -26,7 +26,14 @@ test.describe('Auth flow', () => {
 
     await page.click('button[type="submit"]')
 
-    await expect(page).toHaveURL(`${BASE_URL}/`)
+    // wait for either redirect or error
+    try {
+      await page.waitForURL(`${BASE_URL}/`, { timeout: 15000 })
+    } catch {
+      const errorText = await page.locator('text=').allTextContents().catch(() => [])
+      throw new Error(`Register failed in CI. Errors: ${errorText.join(' | ')}`)
+    }
+
     await expect(page.locator(`text=${user.callsign}`)).toBeVisible()
   })
 
