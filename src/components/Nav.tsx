@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/Session'
 
 export default function Nav() {
@@ -12,17 +12,17 @@ export default function Nav() {
 
   return (
     <nav className="p-4 border-b flex gap-6 items-center">
-      <Link to="/" className="font-bold">
-        QSO Logger
-      </Link>
+      <NavLink to="/" className={({ isActive }) => isActive ? 'font-bold underline' : 'font-bold'}>
+        Home
+      </NavLink>
 
-      <Link to="/about" className="hover:underline">
-        About
-      </Link>
+      <NavLink to="/dx" className={({ isActive }) => isActive ? 'underline font-semibold' : 'hover:underline'}>
+        DX Summary
+      </NavLink>
 
-      <Link to="/contact" className="hover:underline">
-        Contact
-      </Link>
+      <NavLink to="/about" className={({ isActive }) => isActive ? 'underline font-semibold' : 'hover:underline'}>
+        Grid Locator Info
+      </NavLink>
 
       <div className="ml-auto">
         {user ? (

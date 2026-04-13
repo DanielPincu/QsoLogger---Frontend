@@ -26,7 +26,7 @@ function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { la
   ]
 
   return (
-    <Map center={center} zoom={2} style={{ height: '100%', width: '100%' }}>
+    <Map center={center} zoom={2} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
@@ -41,11 +41,14 @@ function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { la
 }
 
 export default function HomePage() {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [highlightForm, setHighlightForm] = useState(false)
+
   const [qsos, setQsos] = useState<Qso[]>([])
   const [form, setForm] = useState({
     remoteCallsign: '',
-    band: '',
-    mode: '',
+    band: '' as Qso['band'] | '',
+    mode: '' as Qso['mode'] | '',
     rstSent: '',
     rstReceived: '',
     qsoDate: ''
@@ -60,60 +63,146 @@ export default function HomePage() {
     load()
   }, [])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await createQso(form)
+
+    // Validation
+    if (!form.remoteCallsign || !form.band || !form.mode || !form.qsoDate) {
+      alert('Please fill all required fields')
+      return
+    }
+
+    const selectedDate = new Date(form.qsoDate)
+    const now = new Date()
+
+    if (selectedDate > now) {
+      alert('QSO date cannot be in the future')
+      return
+    }
+
+    try {
+      if (editingId) {
+        // simple update via delete + create (since no update endpoint yet)
+        await deleteQso(editingId)
+      }
+
+      await createQso(form)
+    } catch {
+      alert('Failed to save QSO')
+      return
+    }
+
+    setEditingId(null)
+
     setForm({
       remoteCallsign: '',
-      band: '',
-      mode: '',
+      band: '' as Qso['band'] | '',
+      mode: '' as Qso['mode'] | '',
       rstSent: '',
       rstReceived: '',
       qsoDate: ''
     })
-    // Refetch after submit
+
     const data = await getQsos()
     setQsos(data)
   }
 
   const handleDelete = async (id: string) => {
+    const ok = confirm('Are you sure you want to delete this QSO?')
+    if (!ok) return
+
     await deleteQso(id)
     // Refetch after delete
     const data = await getQsos()
     setQsos(data)
   }
 
-  return (
-    <div className="p-4">
+    return (
+    <div className="w-full p-4">
       <Nav />
 
       <h1 className="text-xl mb-4">Log QSO</h1>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-sm">
-        <input name="remoteCallsign" placeholder="Remote Callsign" value={form.remoteCallsign} onChange={handleChange} />
-        <input name="band" placeholder="Band" value={form.band} onChange={handleChange} />
-        <input name="mode" placeholder="Mode" value={form.mode} onChange={handleChange} />
-        <input name="rstSent" placeholder="RST Sent" value={form.rstSent} onChange={handleChange} />
-        <input name="rstReceived" placeholder="RST Received" value={form.rstReceived} onChange={handleChange} />
-        <input name="qsoDate" type="datetime-local" value={form.qsoDate} onChange={handleChange} />
-
-        <button type="submit" className="bg-green-600 text-white p-2">Save QSO</button>
+      <form
+        onSubmit={handleSubmit}
+        className={`grid grid-cols-4 gap-2 w-full transition-all duration-300
+          ${highlightForm ? 'ring-4 ring-red-300 bg-red-50 animate-pulse' : ''}`}
+      >
+        <div className="flex flex-col col-span-4">
+          <label className="text-sm font-semibold mb-1">Operator Callsign</label>
+          <input
+            name="remoteCallsign"
+            placeholder="e.g. YO8UFO, OZ8UFO, etc"
+            value={form.remoteCallsign}
+            onChange={handleChange}
+            className="border-2 border-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 p-3 text-lg font-semibold rounded w-full"
+          />
+        </div>
+        <select name="band" value={form.band} onChange={handleChange} className="border p-2">
+          <option value="">Band</option>
+          {['160m','80m','40m','20m','15m','10m','6m','2m','70cm'].map(b => (
+            <option key={b} value={b}>{b}</option>
+          ))}
+        </select>
+        <select name="mode" value={form.mode} onChange={handleChange} className="border p-2">
+          <option value="">Mode</option>
+          {['SSB','CW','RTTY','AM','FM'].map(m => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        <select name="rstSent" value={form.rstSent} onChange={handleChange} className="border p-2">
+          <option value="">Signal Report (RST) Sent</option>
+          {['59','58','57','56','55'].map(r => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <select name="rstReceived" value={form.rstReceived} onChange={handleChange} className="border p-2">
+          <option value="">Signal Report (RST) Received</option>
+          {['59','58','57','56','55'].map(r => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <input
+          name="qsoDate"
+          type="datetime-local"
+          value={form.qsoDate}
+          onChange={handleChange}
+          onFocus={(e) => e.currentTarget.showPicker && e.currentTarget.showPicker()}
+          // eslint-disable-next-line react-hooks/purity
+          max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16)}
+          className="border p-2 col-span-2 cursor-pointer"
+        />
+        <button
+          type="submit"
+          className="bg-green-600 text-white px-4 py-2 col-span-2 rounded font-semibold
+                     transition-all duration-200 ease-in-out
+                     hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+        >
+          Save
+        </button>
       </form>
 
       <h2 className="text-lg mt-6 mb-2">Your QSOs</h2>
 
       <ul className="space-y-2">
-        {qsos.map((qso) => (
-          <li key={qso._id} className="border p-3 flex flex-col gap-1">
-            <div className="flex justify-between">
+        {[...qsos]
+          .sort((a, b) => Number(a.confirmed) - Number(b.confirmed))
+          .map((qso) => (
+          <li key={qso._id} className="border-4 p-3 flex flex-col gap-1">
+            <div className="flex justify-between items-center">
               <div>
                 <strong>{qso.remoteCallsign}</strong> - {qso.band} - {qso.mode}
               </div>
-              <div className={qso.confirmed ? 'text-green-500' : 'text-yellow-500'}>
+              <div
+                className={`px-3 py-1 rounded-full text-sm font-semibold
+                  ${qso.confirmed
+                    ? 'bg-green-100 text-green-700 border border-green-300'
+                    : 'bg-yellow-100 text-yellow-700 border border-yellow-300'}`}
+              >
                 {qso.confirmed ? 'Confirmed' : 'Not confirmed'}
               </div>
             </div>
@@ -129,7 +218,7 @@ export default function HomePage() {
 
                 {/* Leaflet Map */}
                 {qso.from && qso.to && (
-                  <div className="h-48 w-full rounded border overflow-hidden">
+                  <div className="h-96 w-full rounded border overflow-hidden">
                     {/* Leaflet Map */}
                     <LeafletMap from={qso.from} to={qso.to} />
                   </div>
@@ -138,12 +227,40 @@ export default function HomePage() {
             )}
 
             {!qso.confirmed && (
+            <div className="flex gap-2 self-end">
+              <button
+                onClick={() => {
+                    if (editingId === qso._id) {
+                      setHighlightForm(true)
+                      setTimeout(() => setHighlightForm(false), 600)
+                      return
+                    }
+
+                    setEditingId(qso._id)
+                    setHighlightForm(true)
+                    setTimeout(() => setHighlightForm(false), 1500)
+                    setForm({
+                      remoteCallsign: qso.remoteCallsign,
+                      band: qso.band,
+                      mode: qso.mode,
+                      rstSent: qso.rstSent || '',
+                      rstReceived: qso.rstReceived || '',
+                      qsoDate: qso.qsoDate.slice(0,16)
+                    })
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                className="text-blue-500"
+              >
+                Edit
+              </button>
+
               <button
                 onClick={() => handleDelete(qso._id)}
-                className="text-red-500 self-end"
+                className="text-red-500"
               >
                 Delete
               </button>
+            </div>
             )}
           </li>
         ))}

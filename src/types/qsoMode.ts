@@ -1,0 +1,1 @@
+export type Mode = 'SSB' | 'CW' | 'RTTY' | 'AM' | 'FM'

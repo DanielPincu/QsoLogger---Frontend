@@ -2,8 +2,8 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { useAuth } from './auth/Session'
 
 import HomePage from './routes/HomePage'
-import About from './routes/About'
-import Contact from './routes/Contact'
+import About from './routes/Maidenhead'
+import DX_Summary from './routes/DX_Summary'
 import Login from './routes/Login'
 import Register from './routes/Register'
 
@@ -39,10 +39,10 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: '/contact',
+    path: '/dx',
     element: (
       <RequireAuth>
-        <Contact />
+        <DX_Summary />
       </RequireAuth>
     ),
   },
