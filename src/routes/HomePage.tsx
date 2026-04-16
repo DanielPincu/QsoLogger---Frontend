@@ -76,6 +76,10 @@ export default function HomePage() {
     qsoDate: ''
   })
 
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString()
+  }
+
   useEffect(() => {
     const load = async () => {
       const data = await getQsos()
@@ -264,6 +268,9 @@ export default function HomePage() {
             <div className="flex justify-between items-center">
               <div>
                 <strong>{qso.remoteCallsign}</strong> - {qso.band} - {qso.mode}
+                <div className="text-sm text-gray-500">
+                  {formatDate(qso.qsoDate)}
+                </div>
               </div>
               <div
                 data-testid="qso-status"
@@ -280,7 +287,7 @@ export default function HomePage() {
             {qso.confirmed && (
               <div className="text-sm text-gray-600 space-y-2">
                 <div>Distance: {qso.distanceKm ? qso.distanceKm.toFixed(1) : 'N/A'} km</div>
-                <div>Confirmed at: {qso.confirmedAt ? new Date(qso.confirmedAt).toLocaleString() : 'N/A'}</div>
+                <div>Confirmed at: {qso.confirmedAt ? formatDate(qso.confirmedAt) : 'N/A'}</div>
                 <div>
                   From: {qso.from?.lat}, {qso.from?.lon} → To: {qso.to?.lat}, {qso.to?.lon}
                 </div>
