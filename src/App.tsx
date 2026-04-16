@@ -6,6 +6,7 @@ import About from './routes/Maidenhead'
 import DX_Summary from './routes/DX_Summary'
 import Login from './routes/Login'
 import Register from './routes/Register'
+import Profile from './routes/Profile'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -54,6 +55,13 @@ const router = createBrowserRouter([
     path: '/register',
     element: <Register />,
   },
+  {
+    path: '/profile',
+    element: <Profile />,
+  },
+
+
+
 ])
 
 export default function App() {
