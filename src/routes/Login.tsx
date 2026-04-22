@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { login as loginApi } from '../api/auth.api'
 import type { LoginPayload } from '../interfaces/auth.interface'
 import { useAuth } from '../auth/Session'
+import AuthShell from '../components/AuthShell'
+import { Button, FieldLabel, Input } from '../components/ui'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -30,14 +32,10 @@ export default function Login() {
 
     try {
       const data = await loginApi(form)
-
       localStorage.setItem('token', data.token)
-
       await login(data.token)
-
       navigate('/')
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
+    } catch {
       setError('Invalid email or password')
     } finally {
       setLoading(false)
@@ -45,51 +43,45 @@ export default function Login() {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-4">
-      <h1 className="text-2xl mb-6">Login</h1>
+    <AuthShell
+      title="Operator Login"
+      subtitle="Authenticate into your station console and continue exactly where your logbook left off."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <FieldLabel>Email</FieldLabel>
+          <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+        </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
+        <div>
+          <FieldLabel>Password</FieldLabel>
+          <Input
+            name="password"
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
+        {error ? (
+          <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+            {error}
+          </div>
+        ) : null}
 
-        {error && (
-          <p className="text-red-500 text-sm">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-black text-white p-2"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Logging in...' : 'Login'}
-        </button>
-        <div className="text-sm mt-2">
-          Don't have an account?{' '}
-          <span
-            className="text-blue-600 cursor-pointer underline"
-            onClick={() => navigate('/register')}
-          >
+        </Button>
+
+        <div className="text-center text-sm text-slate-400">
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="font-semibold text-emerald-300 transition hover:text-emerald-200">
             Register
-          </span>
+          </Link>
         </div>
       </form>
-    </div>
+    </AuthShell>
   )
 }

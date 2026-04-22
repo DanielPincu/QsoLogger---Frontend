@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { register as registerApi } from '../api/auth.api'
 import type { RegisterPayload } from '../interfaces/auth.interface'
 import { useAuth } from '../auth/Session'
+import AuthShell from '../components/AuthShell'
+import { Button, FieldLabel, Input } from '../components/ui'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -16,7 +18,6 @@ export default function Register() {
   })
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -42,29 +43,27 @@ export default function Register() {
       const data = await registerApi(form)
       await login(data.token)
       navigate('/')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const backend = err?.response?.data
-
+    } catch (err: unknown) {
+      const backend = (err as { response?: { data?: unknown } })?.response?.data
       let message = 'Registration failed'
 
-      // handle different backend shapes
       if (typeof backend === 'string') {
         message = backend
-      } else if (Array.isArray(backend?.errors)) {
-        // prioritize detailed validation errors
-        if (typeof backend.errors[0] === 'string') {
-          message = backend.errors.join(', ')
+      } else if (Array.isArray((backend as { errors?: unknown[] } | undefined)?.errors)) {
+        const errors = (backend as { errors: unknown[] }).errors
+        if (typeof errors[0] === 'string') {
+          message = errors.join(', ')
         } else {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          message = backend.errors.map((e: any) => e.message).join(', ')
+          message = errors
+            .map((item) => (item && typeof item === 'object' && 'message' in item ? String(item.message) : 'Validation error'))
+            .join(', ')
         }
-      } else if (backend?.data?.message) {
-        message = backend.data.message
-      } else if (backend?.message) {
-        message = backend.message
-      } else if (backend?.error) {
-        message = backend.error
+      } else if (backend && typeof backend === 'object' && 'data' in backend && backend.data && typeof backend.data === 'object' && 'message' in backend.data) {
+        message = String(backend.data.message)
+      } else if (backend && typeof backend === 'object' && 'message' in backend) {
+        message = String(backend.message)
+      } else if (backend && typeof backend === 'object' && 'error' in backend) {
+        message = String(backend.error)
       }
 
       console.log('REGISTER ERROR:', backend)
@@ -75,78 +74,73 @@ export default function Register() {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-4">
-      <h1 className="text-2xl mb-6">Register</h1>
+    <AuthShell
+      title="Register Station"
+      subtitle="Create your operator profile with callsign, locator, and credentials for the same backend flow already in place."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <FieldLabel>Callsign</FieldLabel>
+            <Input name="callsign" type="text" placeholder="Callsign" value={form.callsign} onChange={handleChange} required />
+          </div>
+          <div>
+            <FieldLabel>Locator</FieldLabel>
+            <Input name="locator" type="text" placeholder="Locator" value={form.locator} onChange={handleChange} required />
+          </div>
+        </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          name="callsign"
-          type="text"
-          placeholder="Callsign"
-          value={form.callsign}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
+        <div>
+          <FieldLabel>Email</FieldLabel>
+          <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+        </div>
 
-        <input
-          name="locator"
-          type="text"
-          placeholder="Locator"
-          value={form.locator}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
+        <div>
+          <FieldLabel>Password</FieldLabel>
+          <div className="flex gap-2">
+            <Input
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              className="flex-1"
+              required
+            />
+            <Button type="button" variant="secondary" onClick={() => setShowPassword((value) => !value)}>
+              {showPassword ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+        </div>
 
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          className="border p-2"
-          required
-        />
+        <div>
+          <FieldLabel>Confirm Password</FieldLabel>
+          <Input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+        </div>
 
-      <div className="flex gap-2 items-center">
-        <input
-          name="password"
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          className="border p-2 flex-1"
-          required
-        />
-        <button
-          type="button"
-          onClick={() => setShowPassword((v) => !v)}
-          className="text-sm underline"
-        >
-          {showPassword ? 'Hide' : 'Show'}
-        </button>
-      </div>
+        {error ? (
+          <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+            {error}
+          </div>
+        ) : null}
 
-      <input
-        type={showPassword ? 'text' : 'password'}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        className="border p-2"
-        required
-      />
-
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-black text-white p-2 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Registering...' : 'Register'}
-        </button>
+        </Button>
+
+        <div className="text-center text-sm text-slate-400">
+          Already have an account?{' '}
+          <Link to="/login" className="font-semibold text-emerald-300 transition hover:text-emerald-200">
+            Login
+          </Link>
+        </div>
       </form>
-    </div>
+    </AuthShell>
   )
 }
