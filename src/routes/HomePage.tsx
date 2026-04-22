@@ -23,6 +23,15 @@ const Map = RLMapContainer as unknown as React.FC<any>
 const bands: Array<Qso['band']> = ['160m', '80m', '40m', '20m', '15m', '10m', '6m', '2m', '70cm']
 const modes: Array<Qso['mode']> = ['SSB', 'CW', 'RTTY', 'AM', 'FM']
 const reports = ['59', '58', '57', '56', '55']
+const ENTRY_PANEL_STORAGE_KEY = 'dashboard-entry-panel-open'
+const GUIDE_PANEL_STORAGE_KEY = 'dashboard-guide-panel-open'
+const LOG_PANEL_STORAGE_KEY = 'dashboard-log-panel-open'
+
+function getStoredPanelState(key: string, fallback: boolean) {
+  const storedValue = localStorage.getItem(key)
+  if (storedValue === null) return fallback
+  return storedValue === 'true'
+}
 
 function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { lat: number; lon: number } }) {
   const center: [number, number] = [(from.lat + to.lat) / 2, (from.lon + to.lon) / 2]
@@ -55,8 +64,9 @@ function LeafletMap({ from, to }: { from: { lat: number; lon: number }; to: { la
 export default function HomePage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [highlightForm, setHighlightForm] = useState(false)
-  const [isFormOpen, setIsFormOpen] = useState(true)
-  const [isLogOpen, setIsLogOpen] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(() => getStoredPanelState(ENTRY_PANEL_STORAGE_KEY, true))
+  const [isLogOpen, setIsLogOpen] = useState(() => getStoredPanelState(LOG_PANEL_STORAGE_KEY, true))
+  const [isGuideOpen, setIsGuideOpen] = useState(() => getStoredPanelState(GUIDE_PANEL_STORAGE_KEY, true))
   const [isLoading, setIsLoading] = useState(true)
   const [qsos, setQsos] = useState<Qso[]>([])
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'unconfirmed'>('all')
@@ -90,6 +100,18 @@ export default function HomePage() {
   useEffect(() => {
     loadQsos()
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem(ENTRY_PANEL_STORAGE_KEY, String(isFormOpen))
+  }, [isFormOpen])
+
+  useEffect(() => {
+    localStorage.setItem(GUIDE_PANEL_STORAGE_KEY, String(isGuideOpen))
+  }, [isGuideOpen])
+
+  useEffect(() => {
+    localStorage.setItem(LOG_PANEL_STORAGE_KEY, String(isLogOpen))
+  }, [isLogOpen])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -133,6 +155,26 @@ export default function HomePage() {
 
     await deleteQso(id)
     await loadQsos()
+  }
+
+  const toggleEntryPanel = () => {
+    setIsFormOpen((current) => {
+      const next = !current
+      if (next) {
+        setIsGuideOpen(false)
+      }
+      return next
+    })
+  }
+
+  const toggleGuidePanel = () => {
+    setIsGuideOpen((current) => {
+      const next = !current
+      if (next) {
+        setIsFormOpen(false)
+      }
+      return next
+    })
   }
 
   const formatDate = (date: string) =>
@@ -199,113 +241,151 @@ export default function HomePage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_1.35fr]">
-        <Card className={highlightForm ? 'ring-2 ring-amber-300/60 shadow-[0_0_28px_rgba(245,158,11,0.18)]' : ''}>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="label-caps mb-2">QSO Entry Panel</div>
-              <h2 className="text-2xl font-semibold text-white">{editingId ? 'Edit Pending Contact' : 'Log New QSO'}</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Capture the exact contact details. Existing backend validation and confirmation logic remain unchanged.
-              </p>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.5fr)]">
+        <div className="space-y-6 xl:sticky xl:top-5 xl:self-start">
+          <Card className={highlightForm ? 'ring-2 ring-amber-300/60 shadow-[0_0_28px_rgba(245,158,11,0.18)]' : ''}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="label-caps mb-2">QSO Entry Panel</div>
+                <h2 className="text-2xl font-semibold text-white">{editingId ? 'Edit Pending Contact' : 'Log New QSO'}</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Capture the exact contact details. Existing backend validation and confirmation logic remain unchanged.
+                </p>
+              </div>
+              <Button variant="secondary" type="button" onClick={toggleEntryPanel}>
+                {isFormOpen ? 'Collapse' : 'Expand'}
+              </Button>
             </div>
-            <Button variant="secondary" type="button" onClick={() => setIsFormOpen((value) => !value)}>
-              {isFormOpen ? 'Collapse' : 'Expand'}
-            </Button>
-          </div>
 
-          {isFormOpen ? (
-            <form onSubmit={handleSubmit} className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <FieldLabel>Operator Callsign</FieldLabel>
-                <Input
-                  name="remoteCallsign"
-                  placeholder="e.g. YO8UFO, OZ8UFO, etc"
-                  value={form.remoteCallsign}
-                  onChange={handleChange}
-                  className="text-lg font-semibold uppercase text-radio"
-                />
-              </div>
+            {isFormOpen ? (
+              <form onSubmit={handleSubmit} className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FieldLabel>Operator Callsign</FieldLabel>
+                  <Input
+                    name="remoteCallsign"
+                    placeholder="e.g. YO8UFO, OZ8UFO, etc"
+                    value={form.remoteCallsign}
+                    onChange={handleChange}
+                    className="text-lg font-semibold uppercase text-radio"
+                  />
+                </div>
 
+                <div>
+                  <FieldLabel>Band</FieldLabel>
+                  <Select name="band" value={form.band} onChange={handleChange}>
+                    <option value="">Band</option>
+                    {bands.map((band) => (
+                      <option key={band} value={band}>
+                        {band}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div>
+                  <FieldLabel>Mode</FieldLabel>
+                  <Select name="mode" value={form.mode} onChange={handleChange}>
+                    <option value="">Mode</option>
+                    {modes.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {mode}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div>
+                  <FieldLabel>RST Sent</FieldLabel>
+                  <Select name="rstSent" value={form.rstSent} onChange={handleChange}>
+                    <option value="">Signal Report (RST) Sent</option>
+                    {reports.map((report) => (
+                      <option key={report} value={report}>
+                        {report}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div>
+                  <FieldLabel>RST Received</FieldLabel>
+                  <Select name="rstReceived" value={form.rstReceived} onChange={handleChange}>
+                    <option value="">Signal Report (RST) Received</option>
+                    {reports.map((report) => (
+                      <option key={report} value={report}>
+                        {report}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <FieldLabel>QSO Timestamp</FieldLabel>
+                  <Input
+                    name="qsoDate"
+                    type="datetime-local"
+                    value={form.qsoDate}
+                    onChange={handleChange}
+                    onFocus={(e) => e.currentTarget.showPicker && e.currentTarget.showPicker()}
+                    max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                    className="cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-3 sm:col-span-2">
+                  <Button type="submit" className="min-w-[160px]">{editingId ? 'Save Replacement QSO' : 'Save QSO'}</Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="min-w-[140px]"
+                    onClick={() => {
+                      setEditingId(null)
+                      resetForm()
+                    }}
+                  >
+                    Clear Form
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <FieldLabel>Band</FieldLabel>
-                <Select name="band" value={form.band} onChange={handleChange}>
-                  <option value="">Band</option>
-                  {bands.map((band) => (
-                    <option key={band} value={band}>
-                      {band}
-                    </option>
-                  ))}
-                </Select>
+                <div className="label-caps mb-2">Logging Guide</div>
+                <h3 className="text-xl font-semibold text-white">Operator Notes</h3>
               </div>
+              <Button variant="secondary" type="button" onClick={toggleGuidePanel}>
+                {isGuideOpen ? 'Collapse' : 'Expand'}
+              </Button>
+            </div>
 
-              <div>
-                <FieldLabel>Mode</FieldLabel>
-                <Select name="mode" value={form.mode} onChange={handleChange}>
-                  <option value="">Mode</option>
-                  {modes.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {mode}
-                    </option>
-                  ))}
-                </Select>
+            {isGuideOpen ? (
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-2xl border border-slate-700/45 bg-slate-900/45 p-4">
+                  <div className="label-caps mb-2">Matching Rule</div>
+                  <p className="text-sm leading-6 text-slate-300">
+                    A contact stays editable until the remote station logs a matching QSO. Once matched, it becomes confirmed and shows map data automatically.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-amber-400/18 bg-amber-400/7 p-4">
+                  <div className="label-caps mb-2 text-amber-100">Best Practice</div>
+                  <p className="text-sm leading-6 text-slate-300">
+                    Keep callsigns exact and use the real contact timestamp. Small mismatches are the most common reason a pending QSO does not confirm.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-emerald-400/18 bg-emerald-400/7 p-4">
+                  <div className="label-caps mb-2 text-emerald-100">Edit Flow</div>
+                  <p className="text-sm leading-6 text-slate-300">
+                    Selecting <span className="font-semibold text-white">Edit</span> loads the QSO back into the form above, so you can correct band, mode, reports, or time without changing the backend flow.
+                  </p>
+                </div>
               </div>
+            ) : null}
+          </Card>
+        </div>
 
-              <div>
-                <FieldLabel>RST Sent</FieldLabel>
-                <Select name="rstSent" value={form.rstSent} onChange={handleChange}>
-                  <option value="">Signal Report (RST) Sent</option>
-                  {reports.map((report) => (
-                    <option key={report} value={report}>
-                      {report}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div>
-                <FieldLabel>RST Received</FieldLabel>
-                <Select name="rstReceived" value={form.rstReceived} onChange={handleChange}>
-                  <option value="">Signal Report (RST) Received</option>
-                  {reports.map((report) => (
-                    <option key={report} value={report}>
-                      {report}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <FieldLabel>QSO Timestamp</FieldLabel>
-                <Input
-                  name="qsoDate"
-                  type="datetime-local"
-                  value={form.qsoDate}
-                  onChange={handleChange}
-                  onFocus={(e) => e.currentTarget.showPicker && e.currentTarget.showPicker()}
-                  max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                  className="cursor-pointer"
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-3 sm:col-span-2">
-                <Button type="submit">{editingId ? 'Save Replacement QSO' : 'Save QSO'}</Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setEditingId(null)
-                    resetForm()
-                  }}
-                >
-                  Clear Form
-                </Button>
-              </div>
-            </form>
-          ) : null}
-        </Card>
-
-        <Card>
+        <Card className="min-w-0">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="label-caps mb-2">Traffic Monitor</div>
@@ -313,25 +393,27 @@ export default function HomePage() {
               <p className="mt-2 text-sm text-slate-400">Unconfirmed contacts stay pinned first, then confirmed contacts sort by confirmation or QSO date.</p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
+            <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[540px]">
+              <div className="min-w-0">
                 <FieldLabel>Status Filter</FieldLabel>
                 <Select
                   name="statusFilter"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as 'all' | 'confirmed' | 'unconfirmed')}
+                  className="min-h-[52px] w-full min-w-0"
                 >
                   <option value="all">All</option>
                   <option value="confirmed">Confirmed</option>
                   <option value="unconfirmed">Unconfirmed</option>
                 </Select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <FieldLabel>Date Filter</FieldLabel>
                 <Select
                   name="dateFilter"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value as 'recent' | 'older')}
+                  className="min-h-[52px] w-full min-w-0"
                 >
                   <option value="recent">Recent first</option>
                   <option value="older">Older first</option>
