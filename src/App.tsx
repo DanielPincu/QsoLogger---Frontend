@@ -7,12 +7,13 @@ import DX_Summary from './routes/DX_Summary'
 import Login from './routes/Login'
 import Register from './routes/Register'
 import Profile from './routes/Profile'
+import { SpinnerCard } from './components/ui'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
-    return null
+    return <SpinnerCard label="Syncing operator session..." />
   }
 
   if (!user) {
@@ -57,7 +58,11 @@ const router = createBrowserRouter([
   },
   {
     path: '/profile',
-    element: <Profile />,
+    element: (
+      <RequireAuth>
+        <Profile />
+      </RequireAuth>
+    ),
   },
 
 
