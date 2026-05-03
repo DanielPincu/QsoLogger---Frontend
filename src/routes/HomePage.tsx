@@ -215,7 +215,7 @@ export default function HomePage() {
     <AppShell
       title="Signal Dashboard"
       eyebrow="Primary Console"
-      description="Log new contacts, monitor matching confirmations, and review your most recent traffic with a cleaner operator-first layout."
+      description="Log new contacts, monitor matching confirmations, and review your most recent traffic."
       actions={
         editingId ? (
           <Button
@@ -249,7 +249,7 @@ export default function HomePage() {
                 <div className="label-caps mb-2">QSO Entry Panel</div>
                 <h2 className="text-2xl font-semibold text-white">{editingId ? 'Edit Pending Contact' : 'Log New QSO'}</h2>
                 <p className="mt-2 text-sm text-slate-400">
-                  Capture the exact contact details. Existing backend validation and confirmation logic remain unchanged.
+                  Capture the exact contact details.
                 </p>
               </div>
               <Button variant="secondary" type="button" onClick={toggleEntryPanel}>

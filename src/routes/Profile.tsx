@@ -58,7 +58,7 @@ export default function Profile() {
     <AppShell
       title="Operator Profile"
       eyebrow="Station Identity"
-      description="Update your visible operator data while keeping the existing profile API contract and validation flow intact."
+      description="Update your operator data, including callsign, email, and grid locator. This information is used for account management and station identification across the app."
     >
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
