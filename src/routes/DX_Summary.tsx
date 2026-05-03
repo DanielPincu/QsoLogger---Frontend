@@ -71,7 +71,7 @@ export default function DX_Summary() {
       <div className="mt-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <div className="label-caps mb-2">Longest QSO</div>
-          <h2 className="text-2xl font-semibold text-white">Distance Leader</h2>
+          <h2 className="text-2xl font-semibold text-white">Distance Record</h2>
           {longest ? (
             <div className="mt-6 rounded-[24px] border border-emerald-400/20 bg-emerald-400/8 p-5">
               <div className="label-caps text-emerald-100">Remote Callsign</div>
