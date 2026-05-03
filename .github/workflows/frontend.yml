@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - production
+      - development
   push:
     branches:
       - production
+      - development
 
 jobs:
   build-test-deploy:
@@ -30,13 +32,17 @@ jobs:
 
       - name: Create env file
         run: |
-          echo "VITE_API_URL=${{ secrets.API_URL }}" >> .env
-
-      - name: Build app
-        run: npm run build
+          if [ "${GITHUB_REF_NAME}" = "development" ]; then
+            echo "VITE_API_URL=${{ secrets.API_URL_DEV }}" > .env
+          else
+            echo "VITE_API_URL=${{ secrets.API_URL_PROD }}" > .env
+          fi
 
       - name: Run Playwright tests
         run: npm run test
+
+      - name: Build app
+        run: npm run build
 
       # DEPLOY TO FTP
       - name: Deploy via FTP
@@ -46,4 +52,4 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: dist/
-          server-dir: qso/
+          server-dir: ${{ github.ref_name == 'development' && 'qsodev/' || 'qso/' }}
