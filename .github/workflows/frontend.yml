@@ -30,16 +30,20 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Create env file
+      - name: Create env file for tests
+        run: |
+          echo "VITE_API_URL=${{ secrets.API_URL_DEV }}" > .env
+
+      - name: Run Playwright tests
+        run: npm run test
+
+      - name: Create env file for build
         run: |
           if [ "${GITHUB_REF_NAME}" = "development" ]; then
             echo "VITE_API_URL=${{ secrets.API_URL_DEV }}" > .env
           else
             echo "VITE_API_URL=${{ secrets.API_URL_PROD }}" > .env
           fi
-
-      - name: Run Playwright tests
-        run: npm run test
 
       - name: Build app
         run: npm run build
